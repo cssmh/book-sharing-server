@@ -39,7 +39,6 @@ const verify = (req, res, next) => {
 };
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vkpbftc.mongodb.net/?retryWrites=true&w=majority`;
-// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.gwyyl9m.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -57,12 +56,6 @@ async function run() {
 
     const serviceCollection = client.db("careerDB").collection("services");
     const bookingCollection = client.db("careerDB").collection("bookings");
-    const awardCollection = client.db("careerDB").collection("awards");
-    //    app.get('/services',async(req,res)=>{
-    //     const cursor = serviceCollection.find();
-    //     const result = await cursor.toArray();
-    //     res.send(result);
-    //    })
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -91,8 +84,6 @@ async function run() {
         query = { book_provider_email: req.query.email };
       }
 
-      // const result = await serviceCollection().find(query).toArray();
-      // res.send(result);
       const cursor = serviceCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
