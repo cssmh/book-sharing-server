@@ -11,7 +11,6 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
       "https://bookshare-c1817.web.app",
       "https://bookhaven1.netlify.app",
     ],
