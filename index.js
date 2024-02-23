@@ -134,11 +134,6 @@ async function run() {
       res.send(result);
     });
 
-    //    app.get('/bookings',async(req,res)=>{
-    //       const result = await bookingCollection.find().toArray();
-    //       res.send(result);
-    //    })
-
     app.get("/bookings", verify, async (req, res) => {
       // console.log(req.cookies);
       console.log(req.query.email);
@@ -152,8 +147,6 @@ async function run() {
         query = { user_email: req.query.email };
       }
 
-      // const result = await serviceCollection().find(query).toArray();
-      // res.send(result);
       const cursor = bookingCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
@@ -190,15 +183,7 @@ async function run() {
         query = { book_provider_email: req.query.email };
       }
 
-      // const result = await serviceCollection().find(query).toArray();
-      // res.send(result);
       const cursor = bookingCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    });
-
-    app.get("/awards", async (req, res) => {
-      const cursor = awardCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
