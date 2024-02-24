@@ -19,7 +19,7 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-const verify = async (req, res, next) => {
+const verifyTokenFirst = async (req, res, next) => {
   const token = req?.cookies?.token;
   //   console.log('token in m',token);
   if (!token) {
@@ -65,7 +65,7 @@ async function run() {
         .cookie("token", token, {
           httpOnly: true,
           secure: true,
-          sameSite: "Lax",
+          sameSite: "none",
         })
         .send({ success: true });
     });
@@ -80,7 +80,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/books", verify, async (req, res) => {
+    app.get("/books", verifyTokenFirst, async (req, res) => {
       if (req.user.email !== req.query.email) {
         return res.status(403).send({ message: "forbidden" });
       }
@@ -135,7 +135,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/bookings", verify, async (req, res) => {
+    app.get("/bookings", verifyTokenFirst, async (req, res) => {
       // console.log(req.cookies);
       // console.log(req.user.email);
       // console.log("cook cook", req.user);
