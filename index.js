@@ -5,7 +5,6 @@ const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
-
 const port = process.env.PORT || 5000;
 
 app.use(
@@ -20,11 +19,11 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-const verify = (req, res, next) => {
+const verify = async (req, res, next) => {
   const token = req?.cookies?.token;
   //   console.log('token in m',token);
   if (!token) {
-    return res.status(401).send({ message: "unauthorized access" });
+    return res.status(401).send({ message: "not authorized" });
   }
   jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
     if (err) {
@@ -53,12 +52,12 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     //  await client.connect();
 
-    const serviceCollection = client.db("careerDB").collection("services");
-    const bookingCollection = client.db("careerDB").collection("bookings");
+    const bookCollection = client.db("bookHaven").collection("books");
+    const bookingCollection = client.db("bookHaven").collection("bookings");
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
-      console.log("user for token", user);
+      // console.log("user for token", user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
         expiresIn: "1h",
       });
@@ -76,37 +75,41 @@ async function run() {
       res.clearCookie("token", { maxAge: 0 }).send({ success: true });
     });
 
-    app.get("/services", async (req, res) => {
-      console.log(req.query);
+    app.get("/allBooks", async (req, res) => {
+      const result = await bookCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/books", async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query = { book_provider_email: req.query.email };
       }
 
-      const cursor = serviceCollection.find(query);
+      const cursor = bookCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.get("/services/:id", async (req, res) => {
+    app.get("/books/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await serviceCollection.findOne(query);
+      const result = await bookCollection.findOne(query);
       res.send(result);
     });
 
-    app.post("/services", async (req, res) => {
-      const service = req.body;
-      const result = await serviceCollection.insertOne(service);
+    app.post("/books", async (req, res) => {
+      const bookData = req.body;
+      const result = await bookCollection.insertOne(bookData);
       res.send(result);
     });
 
-    app.put("/services/:id", async (req, res) => {
+    app.put("/books/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updatedProduct = req.body;
-      console.log(updatedProduct);
+      // console.log(updatedProduct);
       const updated = {
         $set: {
           book_name: updatedProduct.book_name,
@@ -117,26 +120,21 @@ async function run() {
         },
       };
 
-      const result = await serviceCollection.updateOne(
-        filter,
-        updated,
-        options
-      );
+      const result = await bookCollection.updateOne(filter, updated, options);
       res.send(result);
     });
 
-    app.delete("/services/:id", async (req, res) => {
+    app.delete("/books/:id", async (req, res) => {
       const id = req.params.id;
-      console.log(id);
       const query = { _id: new ObjectId(id) };
-      const result = await serviceCollection.deleteOne(query);
+      const result = await bookCollection.deleteOne(query);
       res.send(result);
     });
 
     app.get("/bookings", verify, async (req, res) => {
       // console.log(req.cookies);
-      console.log(req.query.email);
-      console.log("cook cook", req.user);
+      // console.log(req.user.email);
+      // console.log("cook cook", req.user);
       if (req.user.email !== req.query.email) {
         return res.status(403).send({ message: "forbidden" });
       }
@@ -162,7 +160,7 @@ async function run() {
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateStatus = req.body;
-      console.log(updateStatus);
+      // console.log(updateStatus);
       const updated = {
         $set: {
           status: updateStatus.newStatus,
@@ -199,7 +197,7 @@ async function run() {
 }
 run().catch(console.dir);
 
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
   res.send("SERVER IS RUNNING");
 });
 
