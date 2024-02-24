@@ -65,13 +65,13 @@ async function run() {
         .cookie("token", token, {
           httpOnly: true,
           secure: true,
-          sameSite: "none",
+          sameSite: "Lax",
         })
         .send({ success: true });
     });
 
     app.post("/logout", async (req, res) => {
-      const user = req.body;
+      // const user = req.body;
       res.clearCookie("token", { maxAge: 0 }).send({ success: true });
     });
 
@@ -80,7 +80,11 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/books", async (req, res) => {
+    app.get("/books", verify, async (req, res) => {
+      if (req.user.email !== req.query.email) {
+        return res.status(403).send({ message: "forbidden" });
+      }
+
       let query = {};
       if (req.query?.email) {
         query = { book_provider_email: req.query.email };
