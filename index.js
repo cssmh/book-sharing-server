@@ -60,13 +60,13 @@ async function run() {
         const userEmail = req.body;
         // console.log("user for token", userEmail);
         const getToken = jwt.sign(userEmail, process.env.ACCESS_TOKEN, {
-          expiresIn: "10h",
+          expiresIn: "3d",
         });
         res
           .cookie("token", getToken, {
             httpOnly: true,
             secure: true,
-            sameSite: "none",
+            // sameSite: "none",
           })
           .send({ success: true });
       } catch (err) {
@@ -75,8 +75,12 @@ async function run() {
     });
 
     app.post("/logout", async (req, res) => {
-      // const user = req.body;
-      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+      try {
+        // const user = req.body;
+        res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+      } catch (err) {
+        console.log(err);
+      }
     });
 
     app.get("/allBooks", async (req, res) => {
