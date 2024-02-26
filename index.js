@@ -29,8 +29,8 @@ const verifyTokenFirst = async (req, res, next) => {
     if (err) {
       res.status(401).send({ message: "access forbidden" });
     } else {
-      req.user = decoded;
-      console.log("jjj", req.user.email);
+      req.decodedUser = decoded;
+      // console.log("jjj", req.decodedUser.email);
       next();
     }
   });
@@ -60,13 +60,13 @@ async function run() {
         const userEmail = req.body;
         // console.log("user for token", userEmail);
         const getToken = jwt.sign(userEmail, process.env.ACCESS_TOKEN, {
-          expiresIn: "3d",
+          expiresIn: "24h",
         });
         res
           .cookie("token", getToken, {
             httpOnly: true,
             secure: true,
-            // sameSite: "none",
+            sameSite: "none",
           })
           .send({ success: true });
       } catch (err) {
@@ -94,7 +94,7 @@ async function run() {
 
     app.get("/books", verifyTokenFirst, async (req, res) => {
       try {
-        if (req.user.email !== req.query.email) {
+        if (req.decodedUser.email !== req.query.email) {
           return res.status(403).send({ message: "unauthorized access" });
         }
 
@@ -180,10 +180,9 @@ async function run() {
     app.get("/bookings", verifyTokenFirst, async (req, res) => {
       try {
         // console.log(req.cookies);
-        // console.log(req.user.email);
-        // console.log("cook cook", req.user);
-        if (req.user.email !== req.query.email) {
-          return res.status(403).send({ message: "forbidden" });
+        // console.log(req.decodedUser.email);
+        if (req.decodedUser.email !== req.query.email) {
+          return res.status(403).send({ message: "forbidden access" });
         }
 
         let query = {};
@@ -232,8 +231,12 @@ async function run() {
       }
     });
 
-    app.get("/works", async (req, res) => {
+    app.get("/pending", verifyTokenFirst, async (req, res) => {
       try {
+        if (req.decodedUser.email !== req.query.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+
         let query = {};
         if (req.query?.email) {
           query = { book_provider_email: req.query.email };
