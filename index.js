@@ -112,7 +112,7 @@ async function run() {
       }
     });
 
-    app.get("/books/:id", verifyTokenFirst, async (req, res) => {
+    app.get("/book/:id", verifyTokenFirst, async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
