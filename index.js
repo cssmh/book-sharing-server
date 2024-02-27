@@ -23,11 +23,11 @@ const verifyTokenFirst = async (req, res, next) => {
   const token = req?.cookies?.token;
   //   console.log('token in m',token);
   if (!token) {
-    return res.status(401).send({ message: "not authorized" });
+    return res.status(401).send({ message: "unauthorized access" });
   }
   jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
     if (err) {
-      res.status(401).send({ message: "access forbidden" });
+      res.status(401).send({ message: "not authorized" });
     } else {
       req.decodedUser = decoded;
       // console.log("jjj", req.decodedUser.email);
@@ -77,6 +77,7 @@ async function run() {
     app.post("/logout", async (req, res) => {
       try {
         // const user = req.body;
+        // console.log(user);
         res.clearCookie("token", { maxAge: 0 }).send({ success: true });
       } catch (err) {
         console.log(err);
@@ -95,7 +96,7 @@ async function run() {
     app.get("/books", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser.email !== req.query.email) {
-          return res.status(403).send({ message: "unauthorized access" });
+          return res.status(403).send({ message: "access forbidden" });
         }
 
         let query = {};
@@ -111,7 +112,7 @@ async function run() {
       }
     });
 
-    app.get("/books/:id", async (req, res) => {
+    app.get("/books/:id", verifyTokenFirst, async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
