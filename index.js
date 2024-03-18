@@ -178,6 +178,17 @@ async function run() {
       }
     });
 
+    // for admin get all bookings
+    app.get("/allBookingsForAdmin", async (req, res) => {
+      try {
+        const result = await bookingCollection.find().toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+    // for admin get all bookings end
+
     app.get("/bookings", verifyTokenFirst, async (req, res) => {
       try {
         // console.log(req.cookies);
