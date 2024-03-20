@@ -60,7 +60,7 @@ async function run() {
         const userEmail = req.body;
         // console.log("user for token", userEmail);
         const getToken = jwt.sign(userEmail, process.env.ACCESS_TOKEN, {
-          expiresIn: "24h",
+          expiresIn: "5d",
         });
         res
           .cookie("token", getToken, {
