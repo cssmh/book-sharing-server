@@ -27,7 +27,7 @@ const verifyTokenFirst = async (req, res, next) => {
   }
   jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
     if (err) {
-      res.status(401).send({ message: "not authorized" });
+      res.status(401).send({ message: "unauthorized access" });
     } else {
       req.decodedUser = decoded;
       // console.log("jjj", req.decodedUser.email);
@@ -178,17 +178,6 @@ async function run() {
       }
     });
 
-    // for admin get all bookings
-    app.get("/allBookingsForAdmin", async (req, res) => {
-      try {
-        const result = await bookingCollection.find().toArray();
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-    // for admin get all bookings end
-
     app.get("/bookings", verifyTokenFirst, async (req, res) => {
       try {
         // console.log(req.cookies);
@@ -209,6 +198,24 @@ async function run() {
         console.log(err);
       }
     });
+
+    // for admin get all bookings with token
+    app.get("/allBookings", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser.email !== req.query.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+        if (req.query.email !== "admin@admin.com") {
+          return res.status(403).send({ message: "admin authorized only" });
+        }
+
+        const result = await bookingCollection.find().toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+    // for admin get all bookings with token end
 
     app.post("/bookings", async (req, res) => {
       try {
