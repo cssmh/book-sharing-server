@@ -60,7 +60,7 @@ async function run() {
         const userEmail = req.body;
         // console.log("user for token", userEmail);
         const getToken = jwt.sign(userEmail, process.env.ACCESS_TOKEN, {
-          expiresIn: "5d",
+          expiresIn: "7d",
         });
         res
           .cookie("token", getToken, {
@@ -210,6 +210,15 @@ async function run() {
         }
 
         const result = await bookingCollection.find().toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.delete("/allBookings", async (req, res) => {
+      try {
+        const result = await bookingCollection.deleteMany();
         res.send(result);
       } catch (err) {
         console.log(err);
