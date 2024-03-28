@@ -86,8 +86,14 @@ async function run() {
 
     app.get("/allBooks", async (req, res) => {
       try {
-        const result = await bookCollection.find().toArray();
-        res.send(result);
+        const page = parseInt(req.query.page);
+        const limit = parseInt(req.query.limit);
+        const skipIndex = (page - 1) * limit;
+
+        const cursor = bookCollection.find().skip(skipIndex).limit(limit);
+        const result = await cursor.toArray();
+        const totalBooks = await bookCollection.countDocuments();
+        res.send({ totalBooks, result });
       } catch (err) {
         console.log(err);
       }
