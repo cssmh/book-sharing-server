@@ -99,8 +99,9 @@ async function run() {
       }
     });
 
-    // only token verification to show a user booking to him
-    // also to others in Others Booking of this user page
+    // only token verification to show a user added books to him
+    // and to other user in Book details page where Others Books
+    // of this User button
     app.get("/myBooks", verifyTokenFirst, async (req, res) => {
       try {
         let query = {};
