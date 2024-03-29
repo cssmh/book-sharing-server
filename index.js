@@ -86,11 +86,15 @@ async function run() {
 
     app.get("/allBooks", async (req, res) => {
       try {
+        let query = {};
+        if (req.query?.email) {
+          query = { book_provider_email: req.query.email };
+        }
         const page = parseInt(req.query.page);
         const limit = parseInt(req.query.limit);
         const skipIndex = (page - 1) * limit;
 
-        const cursor = bookCollection.find().skip(skipIndex).limit(limit);
+        const cursor = bookCollection.find(query).skip(skipIndex).limit(limit);
         const result = await cursor.toArray();
         const totalBooks = await bookCollection.countDocuments();
         res.send({ totalBooks, result });
