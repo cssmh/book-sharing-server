@@ -103,19 +103,13 @@ async function run() {
       }
     });
 
-    app.get("/books", verifyTokenFirst, async (req, res) => {
+    app.get("/myBooks", verifyTokenFirst, async (req, res) => {
       try {
-        if (req.decodedUser.email !== req.query.email) {
-          return res.status(403).send({ message: "access forbidden" });
-        }
-
         let query = {};
         if (req.query?.email) {
           query = { book_provider_email: req.query.email };
         }
-
-        const cursor = bookCollection.find(query);
-        const result = await cursor.toArray();
+        const result = await bookCollection.find(query).toArray();
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -133,10 +127,60 @@ async function run() {
       }
     });
 
+    app.get("/bookings", verifyTokenFirst, async (req, res) => {
+      try {
+        // console.log(req.cookies);
+        // console.log(req.decodedUser.email);
+        if (req.decodedUser.email !== req.query.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+
+        let query = {};
+        if (req.query?.email) {
+          query = { user_email: req.query.email };
+        }
+
+        const cursor = bookingCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.get("/pending", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser.email !== req.query.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+
+        let query = {};
+        if (req.query?.email) {
+          query = { book_provider_email: req.query.email };
+        }
+
+        const cursor = bookingCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.post("/books", async (req, res) => {
       try {
         const bookData = req.body;
         const result = await bookCollection.insertOne(bookData);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.post("/bookings", async (req, res) => {
+      try {
+        const booking = req.body;
+        const result = await bookingCollection.insertOne(booking);
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -166,6 +210,29 @@ async function run() {
       }
     });
 
+    app.put("/bookings/:id", async (req, res) => {
+      try {
+        const getParamsId = req.params.id;
+        const filter = { _id: new ObjectId(getParamsId) };
+        const options = { upsert: true };
+        const updateStatus = req.body;
+        // console.log(updateStatus);
+        const updated = {
+          $set: {
+            status: updateStatus.newStatus,
+          },
+        };
+        const result = await bookingCollection.updateOne(
+          filter,
+          updated,
+          options
+        );
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.delete("/books/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -182,27 +249,6 @@ async function run() {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const result = await bookingCollection.deleteOne(query);
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    app.get("/bookings", verifyTokenFirst, async (req, res) => {
-      try {
-        // console.log(req.cookies);
-        // console.log(req.decodedUser.email);
-        if (req.decodedUser.email !== req.query.email) {
-          return res.status(403).send({ message: "forbidden access" });
-        }
-
-        let query = {};
-        if (req.query?.email) {
-          query = { user_email: req.query.email };
-        }
-
-        const cursor = bookingCollection.find(query);
-        const result = await cursor.toArray();
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -235,58 +281,6 @@ async function run() {
       }
     });
     // for admin get all bookings with token end
-
-    app.post("/bookings", async (req, res) => {
-      try {
-        const booking = req.body;
-        const result = await bookingCollection.insertOne(booking);
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    app.put("/bookings/:id", async (req, res) => {
-      try {
-        const getParamsId = req.params.id;
-        const filter = { _id: new ObjectId(getParamsId) };
-        const options = { upsert: true };
-        const updateStatus = req.body;
-        // console.log(updateStatus);
-        const updated = {
-          $set: {
-            status: updateStatus.newStatus,
-          },
-        };
-        const result = await bookingCollection.updateOne(
-          filter,
-          updated,
-          options
-        );
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    app.get("/pending", verifyTokenFirst, async (req, res) => {
-      try {
-        if (req.decodedUser.email !== req.query.email) {
-          return res.status(403).send({ message: "forbidden access" });
-        }
-
-        let query = {};
-        if (req.query?.email) {
-          query = { book_provider_email: req.query.email };
-        }
-
-        const cursor = bookingCollection.find(query);
-        const result = await cursor.toArray();
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
