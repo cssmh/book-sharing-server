@@ -197,9 +197,11 @@ async function run() {
           $set: {
             book_name: updatedProduct.book_name,
             book_image: updatedProduct.book_image,
-            description: updatedProduct.description,
-            phone: updatedProduct.phone,
+            book_provider_name: updatedProduct.book_provider_name,
+            book_provider_image: updatedProduct.book_provider_image,
             location: updatedProduct.location,
+            phone: updatedProduct.phone,
+            description: updatedProduct.description,
           },
         };
         const result = await bookCollection.updateOne(filter, updated, options);
