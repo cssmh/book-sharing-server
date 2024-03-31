@@ -100,8 +100,8 @@ async function run() {
     });
 
     // only token verification to show a user added books to him
-    // and to other user in Book details page where Others Books
-    // of this User button
+    // and to other user in Book details page where added Others
+    // Books of this User button
     app.get("/myBooks", verifyTokenFirst, async (req, res) => {
       try {
         let query = {};
