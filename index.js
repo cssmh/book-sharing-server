@@ -12,6 +12,7 @@ app.use(
     origin: [
       "https://bookshare-c1817.web.app",
       "https://bookhaven1.netlify.app",
+      "https://open-rest.surge.sh"
     ],
     credentials: true,
   })
