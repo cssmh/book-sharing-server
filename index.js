@@ -12,7 +12,7 @@ app.use(
     origin: [
       "https://bookshare-c1817.web.app",
       "https://bookhaven1.netlify.app",
-      "https://open-rest.surge.sh"
+      "https://open-rest.surge.sh",
     ],
     credentials: true,
   })
@@ -167,7 +167,7 @@ async function run() {
       }
     });
 
-    app.post("/books", async (req, res) => {
+    app.post("/book", async (req, res) => {
       try {
         const bookData = req.body;
         const result = await bookCollection.insertOne(bookData);
@@ -177,7 +177,7 @@ async function run() {
       }
     });
 
-    app.post("/bookings", async (req, res) => {
+    app.post("/addBooking", async (req, res) => {
       try {
         const booking = req.body;
         const result = await bookingCollection.insertOne(booking);
@@ -192,17 +192,17 @@ async function run() {
         const getParamsId = req.params.id;
         const filter = { _id: new ObjectId(getParamsId) };
         const options = { upsert: true };
-        const updatedProduct = req.body;
-        // console.log(updatedProduct);
+        const updatedBookData = req.body;
+        // console.log(updatedBookData);
         const updated = {
           $set: {
-            book_name: updatedProduct.book_name,
-            book_image: updatedProduct.book_image,
-            book_provider_name: updatedProduct.book_provider_name,
-            book_provider_image: updatedProduct.book_provider_image,
-            location: updatedProduct.location,
-            phone: updatedProduct.phone,
-            description: updatedProduct.description,
+            book_name: updatedBookData.book_name,
+            book_image: updatedBookData.book_image,
+            book_provider_name: updatedBookData.book_provider_name,
+            book_provider_image: updatedBookData.book_provider_image,
+            location: updatedBookData.location,
+            phone: updatedBookData.phone,
+            description: updatedBookData.description,
           },
         };
         const result = await bookCollection.updateOne(filter, updated, options);
@@ -235,8 +235,14 @@ async function run() {
       }
     });
 
-    app.delete("/books/:id", async (req, res) => {
+    app.delete("/books/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
+        if (
+          req.params.email !== "admin@admin.com" &&
+          req.params.email !== req.decodedUser.email
+        ) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const result = await bookCollection.deleteOne(query);
@@ -246,6 +252,7 @@ async function run() {
       }
     });
 
+    // admin using it also
     app.delete("/bookings/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -274,8 +281,15 @@ async function run() {
       }
     });
 
-    app.delete("/allBookings", async (req, res) => {
+    app.delete("/allBookings", verifyTokenFirst, async (req, res) => {
       try {
+        if (req.decodedUser.email !== req.query.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+        if (req.query.email !== "admin@admin.com") {
+          return res.status(403).send({ message: "admin authorized only" });
+        }
+
         const result = await bookingCollection.deleteMany();
         res.send(result);
       } catch (err) {
