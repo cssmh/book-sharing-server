@@ -238,8 +238,8 @@ async function run() {
     app.delete("/books/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
         if (
-          req.params.email !== "admin@admin.com" &&
-          req.params.email !== req.decodedUser.email
+          req.decodedUser?.email !== req.params?.email &&
+          req.decodedUser?.email !== "admin@admin.com"
         ) {
           return res.status(403).send({ message: "forbidden access" });
         }
@@ -267,10 +267,7 @@ async function run() {
     // for admin get all bookings with token
     app.get("/allBookings", verifyTokenFirst, async (req, res) => {
       try {
-        if (req.decodedUser.email !== req.query.email) {
-          return res.status(403).send({ message: "forbidden access" });
-        }
-        if (req.query.email !== "admin@admin.com") {
+        if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
         }
 
@@ -283,10 +280,7 @@ async function run() {
 
     app.delete("/allBookings", verifyTokenFirst, async (req, res) => {
       try {
-        if (req.decodedUser.email !== req.query.email) {
-          return res.status(403).send({ message: "forbidden access" });
-        }
-        if (req.query.email !== "admin@admin.com") {
+        if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
         }
 
