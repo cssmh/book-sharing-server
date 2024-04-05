@@ -137,7 +137,7 @@ async function run() {
 
         let query = {};
         if (req.query?.email) {
-          query = { user_email: req.query.email };
+          query = { book_purchaser_email: req.query.email };
         }
 
         const cursor = bookingCollection.find(query);
@@ -150,7 +150,7 @@ async function run() {
 
     app.get("/pending", verifyTokenFirst, async (req, res) => {
       try {
-        if (req.decodedUser.email !== req.query.email) {
+        if (req.decodedUser.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
 
@@ -187,7 +187,7 @@ async function run() {
       }
     });
 
-    app.put("/books/:id", async (req, res) => {
+    app.put("/book/:id", async (req, res) => {
       try {
         const getParamsId = req.params.id;
         const filter = { _id: new ObjectId(getParamsId) };
@@ -235,14 +235,16 @@ async function run() {
       }
     });
 
-    app.delete("/books/:id/:email", verifyTokenFirst, async (req, res) => {
+    app.delete("/book/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
-        if (
-          req.decodedUser?.email !== req.params?.email &&
-          req.decodedUser?.email !== "admin@admin.com"
-        ) {
-          return res.status(403).send({ message: "forbidden access" });
+        // Get the email from the decoded user
+        const userEmail = req.decodedUser?.email;
+
+        // Check if the user is admin or the owner of the book
+        if (userEmail !== "admin@admin.com" && userEmail !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
         }
+
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const result = await bookCollection.deleteOne(query);
@@ -253,7 +255,7 @@ async function run() {
     });
 
     // admin using it also
-    app.delete("/bookings/:id", async (req, res) => {
+    app.delete("/booking/:id", async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
