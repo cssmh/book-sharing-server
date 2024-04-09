@@ -187,8 +187,11 @@ async function run() {
       }
     });
 
-    app.put("/book/:id", async (req, res) => {
+    app.put("/book/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
+        if (req.decodedUser?.email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
         const getParamsId = req.params.id;
         const filter = { _id: new ObjectId(getParamsId) };
         const options = { upsert: true };
@@ -241,7 +244,10 @@ async function run() {
         const userEmail = req.decodedUser?.email;
 
         // Check if the user is admin or the owner of the book
-        if (userEmail !== "admin@admin.com" && userEmail !== req.params?.email) {
+        if (
+          userEmail !== "admin@admin.com" &&
+          userEmail !== req.params?.email
+        ) {
           return res.status(403).send({ message: "Forbidden access" });
         }
 
