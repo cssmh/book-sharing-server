@@ -22,7 +22,7 @@ app.use(cookieParser());
 
 const verifyTokenFirst = async (req, res, next) => {
   const token = req?.cookies?.token;
-  //   console.log('token in m',token);
+  //   console.log(token);
   if (!token) {
     return res.status(401).send({ message: "unauthorized access" });
   }
@@ -31,7 +31,6 @@ const verifyTokenFirst = async (req, res, next) => {
       res.status(401).send({ message: "unauthorized access" });
     } else {
       req.decodedUser = decoded;
-      // console.log("jjj", req.decodedUser.email);
       next();
     }
   });
