@@ -200,8 +200,6 @@ async function run() {
           $set: {
             book_name: updatedBookData.book_name,
             book_image: updatedBookData.book_image,
-            book_provider_name: updatedBookData.book_provider_name,
-            book_provider_image: updatedBookData.book_provider_image,
             location: updatedBookData.location,
             phone: updatedBookData.phone,
             description: updatedBookData.description,
