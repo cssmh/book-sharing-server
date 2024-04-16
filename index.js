@@ -238,6 +238,30 @@ async function run() {
       }
     });
 
+    // update user name and photo from profile will update all his book
+    // his photo and name also
+    app.put("/myBooks/:email", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        const filter = {
+          book_provider_email: req.params?.email,
+        };
+        const updatedMyAllBookData = req.body;
+        const updatedInfo = {
+          $set: {
+            book_provider_name: updatedMyAllBookData.name,
+            book_provider_image: updatedMyAllBookData.photo,
+          },
+        };
+        const result = await bookCollection.updateMany(filter, updatedInfo);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.delete("/book/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
         // Get the email from the decoded user
