@@ -136,9 +136,8 @@ async function run() {
 
         let query = {};
         if (req.query?.email) {
-          query = { book_purchaser_email: req.query.email };
+          query = { user_email: req.query.email };
         }
-
         const cursor = bookingCollection.find(query);
         const result = await cursor.toArray();
         res.send(result);
@@ -152,12 +151,10 @@ async function run() {
         if (req.decodedUser.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
-
         let query = {};
         if (req.query?.email) {
           query = { book_provider_email: req.query.email };
         }
-
         const cursor = bookingCollection.find(query);
         const result = await cursor.toArray();
         res.send(result);
@@ -212,9 +209,13 @@ async function run() {
       }
     });
 
-    app.put("/bookings/:id", async (req, res) => {
+    // update booking status by provider
+    app.put("/bookings/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
-        const getParamsId = req.params.id;
+        if (req.decodedUser?.email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        const getParamsId = req.params?.id;
         const filter = { _id: new ObjectId(getParamsId) };
         const options = { upsert: true };
         const updateStatus = req.body;
@@ -237,7 +238,7 @@ async function run() {
 
     // update user name and photo from profile will update all his book
     // his photo and name also
-    app.put("/myBooks/:email", verifyTokenFirst, async (req, res) => {
+    app.put("/myAllBooks/:email", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
@@ -259,12 +260,31 @@ async function run() {
       }
     });
 
+    // book status update available or not
+    app.put("/book-status/:id/:email", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        const idx = req.params.id;
+        const filter = { _id: new ObjectId(idx) };
+        const options = { upsert: true };
+        const updatedStatus = req.body;
+        const updated = {
+          $set: {
+            book_status: updatedStatus.bookStatus,
+          },
+        };
+        const result = await bookCollection.updateOne(filter, updated, options);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.delete("/book/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
-        // Get the email from the decoded user
         const userEmail = req.decodedUser?.email;
-
-        // Check if the user is admin or the owner of the book
         if (
           userEmail !== "admin@admin.com" &&
           userEmail !== req.params?.email
@@ -301,19 +321,6 @@ async function run() {
         }
 
         const result = await bookingCollection.find().toArray();
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    app.delete("/allBookings", verifyTokenFirst, async (req, res) => {
-      try {
-        if (req.decodedUser?.email !== "admin@admin.com") {
-          return res.status(403).send({ message: "admin authorized only" });
-        }
-
-        const result = await bookingCollection.deleteMany();
         res.send(result);
       } catch (err) {
         console.log(err);
