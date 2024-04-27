@@ -219,7 +219,6 @@ async function run() {
         const filter = { _id: new ObjectId(getParamsId) };
         const options = { upsert: true };
         const updateStatus = req.body;
-        // console.log(updateStatus);
         const updated = {
           $set: {
             status: updateStatus.newStatus,
@@ -230,6 +229,27 @@ async function run() {
           updated,
           options
         );
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    // send completed time to booking data while completed
+    app.patch("/add-time/:id/:email", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        const filter = { _id: new ObjectId(req.params?.id) };
+        const updated = {
+          $set: {
+            completed_at: req.body.todayDateTime,
+          },
+        };
+        const result = await bookingCollection.updateOne(filter, updated, {
+          upsert: true,
+        });
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -301,19 +321,7 @@ async function run() {
       }
     });
 
-    // admin using it also
-    app.delete("/booking/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const result = await bookingCollection.deleteOne(query);
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    // for admin get all bookings with token
+    // admin special use here
     app.get("/allBookings", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== "admin@admin.com") {
@@ -326,7 +334,73 @@ async function run() {
         console.log(err);
       }
     });
-    // for admin get all bookings with token end
+
+    app.put("/allBooksAvailable", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== "admin@admin.com") {
+          return res.status(403).send({ message: "admin authorized only" });
+        }
+        const options = { upsert: true };
+        const updated = {
+          $set: {
+            book_status: "available",
+          },
+        };
+        const result = await bookCollection.updateMany({}, updated, options);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.put("/updateToPending", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== "admin@admin.com") {
+          return res.status(403).send({ message: "admin authorized only" });
+        }
+        // Define filter to find documents with status "Completed"
+        // and completed_at field exists
+        const filter = { status: "Completed", completed_at: { $exists: true } };
+        // Define update to set status to "Pending" and remove completed_at field
+        const update = {
+          $set: {
+            status: "Pending",
+          },
+          $unset: {
+            completed_at: 1,
+          },
+        };
+
+        const result = await bookingCollection.updateMany(filter, update);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.delete("/booking/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await bookingCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.delete("/AllBookings", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== "admin@admin.com") {
+          return res.status(403).send({ message: "admin authorized only" });
+        }
+        const result = await bookingCollection.deleteMany();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+    // admin special use here end
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
