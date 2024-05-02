@@ -188,17 +188,15 @@ async function run() {
         if (req.decodedUser?.email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
         }
-        const getParamsId = req.params.id;
-        const filter = { _id: new ObjectId(getParamsId) };
+        const filter = { _id: new ObjectId(req.params?.id) };
         const options = { upsert: true };
         const updatedBookData = req.body;
-        // console.log(updatedBookData);
         const updated = {
           $set: {
             book_name: updatedBookData.book_name,
             book_image: updatedBookData.book_image,
-            location: updatedBookData.location,
-            phone: updatedBookData.phone,
+            book_provider_phone: updatedBookData.book_provider_phone,
+            provider_location: updatedBookData.provider_location,
             description: updatedBookData.description,
           },
         };
@@ -366,6 +364,7 @@ async function run() {
           $set: {
             status: "Pending",
           },
+          // means delete that field
           $unset: {
             completed_at: 1,
           },
