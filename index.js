@@ -84,7 +84,7 @@ async function run() {
       }
     });
 
-    app.get("/allBooks", async (req, res) => {
+    app.get("/all-books", async (req, res) => {
       try {
         const page = parseInt(req.query.page);
         const limit = parseInt(req.query.limit);
@@ -99,10 +99,7 @@ async function run() {
       }
     });
 
-    // only token verification to show a user added books to him
-    // and to other user in Book details page where added Others
-    // Books of this User button
-    app.get("/myBooks", verifyTokenFirst, async (req, res) => {
+    app.get("/my-books", verifyTokenFirst, async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
@@ -126,10 +123,9 @@ async function run() {
       }
     });
 
-    app.get("/bookings", verifyTokenFirst, async (req, res) => {
+    app.get("/my-bookings", verifyTokenFirst, async (req, res) => {
       try {
         // console.log(req.cookies);
-        // console.log(req.decodedUser.email);
         if (req.decodedUser.email !== req.query.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
@@ -146,7 +142,7 @@ async function run() {
       }
     });
 
-    app.get("/pending", verifyTokenFirst, async (req, res) => {
+    app.get("/my-pending", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
@@ -156,6 +152,26 @@ async function run() {
           query = { book_provider_email: req.query.email };
         }
         const cursor = bookingCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.get("/unavailable-ids", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser.email !== req.query?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        const query = {
+          book_status: "Unavailable",
+          book_provider_email: req.query?.email,
+        };
+        const options = {
+          projection: { _id: 1 },
+        };
+        const cursor = bookCollection.find(query, options);
         const result = await cursor.toArray();
         res.send(result);
       } catch (err) {
@@ -173,7 +189,7 @@ async function run() {
       }
     });
 
-    app.post("/addBooking", async (req, res) => {
+    app.post("/add-booking", async (req, res) => {
       try {
         const booking = req.body;
         const result = await bookingCollection.insertOne(booking);
@@ -208,77 +224,35 @@ async function run() {
     });
 
     // update booking status by provider
-    app.put("/bookings/:id/:email", verifyTokenFirst, async (req, res) => {
-      try {
-        if (req.decodedUser?.email !== req.params?.email) {
-          return res.status(403).send({ message: "Forbidden access" });
+    app.put(
+      "/booking-status/:id/:email",
+      verifyTokenFirst,
+      async (req, res) => {
+        try {
+          if (req.decodedUser?.email !== req.params?.email) {
+            return res.status(403).send({ message: "Forbidden access" });
+          }
+          const filter = { _id: new ObjectId(req.params?.id) };
+          const options = { upsert: true };
+          const updateStatus = req.body;
+          const updated = {
+            $set: {
+              status: updateStatus.updatedPendingStatus,
+            },
+          };
+          const result = await bookingCollection.updateOne(
+            filter,
+            updated,
+            options
+          );
+          res.send(result);
+        } catch (err) {
+          console.log(err);
         }
-        const getParamsId = req.params?.id;
-        const filter = { _id: new ObjectId(getParamsId) };
-        const options = { upsert: true };
-        const updateStatus = req.body;
-        const updated = {
-          $set: {
-            status: updateStatus.newStatus,
-          },
-        };
-        const result = await bookingCollection.updateOne(
-          filter,
-          updated,
-          options
-        );
-        res.send(result);
-      } catch (err) {
-        console.log(err);
       }
-    });
+    );
 
-    // send completed time to booking data while completed
-    app.patch("/add-time/:id/:email", verifyTokenFirst, async (req, res) => {
-      try {
-        if (req.decodedUser?.email !== req.params?.email) {
-          return res.status(403).send({ message: "Forbidden access" });
-        }
-        const filter = { _id: new ObjectId(req.params?.id) };
-        const updated = {
-          $set: {
-            completed_at: req.body.todayDateTime,
-          },
-        };
-        const result = await bookingCollection.updateOne(filter, updated, {
-          upsert: true,
-        });
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    // update user name and photo from profile will update all his book
-    // his photo and name also
-    app.put("/myAllBooks/:email", verifyTokenFirst, async (req, res) => {
-      try {
-        if (req.decodedUser?.email !== req.params?.email) {
-          return res.status(403).send({ message: "Forbidden access" });
-        }
-        const filter = {
-          book_provider_email: req.params?.email,
-        };
-        const updatedMyAllBookData = req.body;
-        const updatedInfo = {
-          $set: {
-            book_provider_name: updatedMyAllBookData.name,
-            book_provider_image: updatedMyAllBookData.photo,
-          },
-        };
-        const result = await bookCollection.updateMany(filter, updatedInfo);
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    // book status update available or not
+    // book status update (available or not)
     app.put("/book-status/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.params?.email) {
@@ -300,6 +274,51 @@ async function run() {
       }
     });
 
+    // send completed time to booking data while completed
+    app.put("/add-time/:id/:email", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        const filter = { _id: new ObjectId(req.params?.id) };
+        const updated = {
+          $set: {
+            completed_at: req.body.todayDateTime,
+          },
+        };
+        const result = await bookingCollection.updateOne(filter, updated, {
+          upsert: true,
+        });
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    // update user name and photo from profile will update all his book
+    // his photo and name also
+    app.put("/my-all-books/:email", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
+        const filter = {
+          book_provider_email: req.params?.email,
+        };
+        const updatedMyAllBookData = req.body;
+        const updatedInfo = {
+          $set: {
+            book_provider_name: updatedMyAllBookData.name,
+            book_provider_image: updatedMyAllBookData.photo,
+          },
+        };
+        const result = await bookCollection.updateMany(filter, updatedInfo);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.delete("/book/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
         const userEmail = req.decodedUser?.email;
@@ -309,9 +328,8 @@ async function run() {
         ) {
           return res.status(403).send({ message: "Forbidden access" });
         }
-
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
+        const idx = req.params.id;
+        const query = { _id: new ObjectId(idx) };
         const result = await bookCollection.deleteOne(query);
         res.send(result);
       } catch (err) {
@@ -320,12 +338,11 @@ async function run() {
     });
 
     // admin special use here
-    app.get("/allBookings", verifyTokenFirst, async (req, res) => {
+    app.get("/all-bookings", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
         }
-
         const result = await bookingCollection.find().toArray();
         res.send(result);
       } catch (err) {
@@ -333,7 +350,7 @@ async function run() {
       }
     });
 
-    app.put("/allBooksAvailable", verifyTokenFirst, async (req, res) => {
+    app.put("/available-all-books", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
@@ -351,7 +368,7 @@ async function run() {
       }
     });
 
-    app.put("/updateToPending", verifyTokenFirst, async (req, res) => {
+    app.put("/update-to-pending", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
@@ -359,17 +376,15 @@ async function run() {
         // Define filter to find documents with status "Completed"
         // and completed_at field exists
         const filter = { status: "Completed", completed_at: { $exists: true } };
-        // Define update to set status to "Pending" and remove completed_at field
         const update = {
           $set: {
             status: "Pending",
           },
-          // means delete that field
+          //unset means delete that field
           $unset: {
             completed_at: 1,
           },
         };
-
         const result = await bookingCollection.updateMany(filter, update);
         res.send(result);
       } catch (err) {
@@ -388,7 +403,7 @@ async function run() {
       }
     });
 
-    app.delete("/AllBookings", verifyTokenFirst, async (req, res) => {
+    app.delete("/all-bookings", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
