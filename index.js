@@ -60,7 +60,7 @@ async function run() {
         const userEmail = req.body;
         // console.log("user for token", userEmail);
         const getToken = jwt.sign(userEmail, process.env.ACCESS_TOKEN, {
-          expiresIn: "7d",
+          expiresIn: "5d",
         });
         res
           .cookie("token", getToken, {
@@ -99,7 +99,7 @@ async function run() {
       }
     });
 
-    app.get("/my-books", verifyTokenFirst, async (req, res) => {
+    app.get("/my-books", async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
@@ -433,5 +433,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`CRUD RUNNING ON PORT ${port}`);
+  console.log(`BOOKS RUNNING ON PORT ${port}`);
 });
