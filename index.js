@@ -54,6 +54,7 @@ async function run() {
 
     const bookCollection = client.db("bookHaven").collection("books");
     const bookingCollection = client.db("bookHaven").collection("bookings");
+    const emailCollection = client.db("bookHaven").collection("emails");
 
     app.post("/jwt", async (req, res) => {
       try {
@@ -106,6 +107,15 @@ async function run() {
           query = { book_provider_email: req.query.email };
         }
         const result = await bookCollection.find(query).toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.get("/emails", async (req, res) => {
+      try {
+        const result = await emailCollection.find().toArray();
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -173,6 +183,16 @@ async function run() {
         };
         const cursor = bookCollection.find(query, options);
         const result = await cursor.toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.post("/email", async (req, res) => {
+      try {
+        const emailData = req.body;
+        const result = await emailCollection.insertOne(emailData);
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -417,10 +437,10 @@ async function run() {
     // admin special use here end
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -429,9 +449,9 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("SERVER IS RUNNING");
+  res.send("BOOKS ARE YOURS");
 });
 
 app.listen(port, () => {
-  console.log(`BOOKS RUNNING ON PORT ${port}`);
+  console.log(`SERVER RUNNING ON PORT ${port}`);
 });
