@@ -87,8 +87,8 @@ async function run() {
 
     app.get("/all-books", async (req, res) => {
       try {
-        const page = parseInt(req.query.page);
-        const limit = parseInt(req.query.limit);
+        const page = parseInt(req.query?.page);
+        const limit = parseInt(req.query?.limit);
         const skipIndex = (page - 1) * limit;
 
         const cursor = bookCollection.find().skip(skipIndex).limit(limit);
@@ -339,6 +339,19 @@ async function run() {
       }
     });
 
+    app.patch("/add-review/:id", verifyTokenFirst, async (req, res) => {
+      const idx = req.params?.id;
+      const query = { _id: new ObjectId(idx) };
+      const updated = {
+        $set: {
+          user_name: req.body.name,
+          user_review: req.body.review,
+        },
+      };
+      const result = await bookCollection.updateOne(query, updated);
+      res.send(result);
+    });
+
     app.delete("/book/:id/:email", verifyTokenFirst, async (req, res) => {
       try {
         const userEmail = req.decodedUser?.email;
@@ -379,6 +392,11 @@ async function run() {
         const updated = {
           $set: {
             book_status: "available",
+          },
+          //unset means delete that field
+          $unset: {
+            user_name: 1,
+            user_review: 1,
           },
         };
         const result = await bookCollection.updateMany({}, updated, options);
