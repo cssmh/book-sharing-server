@@ -411,16 +411,14 @@ async function run() {
         if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
         }
-        // Define filter to find documents with status "Completed"
-        // and completed_at field exists
-        const filter = { status: "Completed", completed_at: { $exists: true } };
+        const filter = { status: { $in: ["Completed", "Progress"] } };
         const update = {
           $set: {
             status: "Pending",
           },
-          //unset means delete that field
           $unset: {
-            completed_at: 1,
+            completed_at: "",
+            // MongoDB uses an empty string to indicate removal of the field
           },
         };
         const result = await bookingCollection.updateMany(filter, update);
