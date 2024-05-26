@@ -439,6 +439,20 @@ async function run() {
       }
     });
 
+    app.delete("/email/:id", verifyTokenFirst, async (req, res) => {
+      try {
+        if (req.decodedUser?.email !== "admin@admin.com") {
+          return res.status(403).send({ message: "admin authorized only" });
+        }
+        const id = req.params?.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await emailCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.delete("/all-bookings", verifyTokenFirst, async (req, res) => {
       try {
         if (req.decodedUser?.email !== "admin@admin.com") {
