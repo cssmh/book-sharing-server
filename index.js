@@ -88,9 +88,17 @@ async function run() {
       try {
         const page = parseInt(req.query?.page);
         const limit = parseInt(req.query?.limit);
+        const search = req.query?.search || "";
         const skipIndex = (page - 1) * limit;
 
-        const cursor = bookCollection.find().skip(skipIndex).limit(limit);
+        const query = {
+          $or: [
+            { book_name: { $regex: search, $options: "i" } },
+            { book_provider_name: { $regex: search, $options: "i" } },
+          ],
+        };
+
+        const cursor = bookCollection.find(query).skip(skipIndex).limit(limit);
         const result = await cursor.toArray();
         const totalBooks = await bookCollection.countDocuments();
         res.send({ totalBooks, result });
@@ -126,7 +134,7 @@ async function run() {
     app.get("/my-bookings", verifyToken, async (req, res) => {
       try {
         // console.log(req.cookies);
-        if (req.decodedUser.email !== req.query.email) {
+        if (req.decodedUser?.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
 
@@ -383,7 +391,15 @@ async function run() {
         if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
         }
-        const result = await bookingCollection.find().toArray();
+        const filter = req.query?.filter;
+        let query = {};
+
+        if (filter && filter !== "All") {
+          query = {
+            status: filter,
+          };
+        }
+        const result = await bookingCollection.find(query).toArray();
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -478,5 +494,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`BOOKS WAITING ON PORT ${port}`);
+  console.log(`SERVER RUNNING ON PORT ${port}`);
 });
