@@ -65,8 +65,8 @@ async function run() {
         res
           .cookie("token", getToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: "none",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
           })
           .send({ success: true });
       } catch (err) {
@@ -78,7 +78,13 @@ async function run() {
       try {
         // const user = req.body;
         // console.log(user);
-        res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+        res
+          .clearCookie("token", {
+            maxAge: 0,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          })
+          .send({ success: true });
       } catch (err) {
         console.log(err);
       }
@@ -88,20 +94,21 @@ async function run() {
       try {
         const page = parseInt(req.query?.page);
         const limit = parseInt(req.query?.limit);
-        const search = req.query?.search || "";
+        const searchTerm = req.query?.search || "";
         const skipIndex = (page - 1) * limit;
 
         const query = {
           $or: [
-            { book_name: { $regex: search, $options: "i" } },
-            { book_provider_name: { $regex: search, $options: "i" } },
+            { book_name: { $regex: searchTerm, $options: "i" } },
+            { provider_name: { $regex: searchTerm, $options: "i" } },
           ],
         };
+        const totalBooks = (await bookCollection.countDocuments(query)) || 0;
+        const totalPages = Math.ceil(totalBooks / limit) || 0;
 
         const cursor = bookCollection.find(query).skip(skipIndex).limit(limit);
         const result = await cursor.toArray();
-        const totalBooks = await bookCollection.countDocuments();
-        res.send({ totalBooks, result });
+        res.send({ totalPages, totalBooks, result });
       } catch (err) {
         console.log(err);
       }
@@ -111,7 +118,7 @@ async function run() {
       try {
         let query = {};
         if (req.query?.email) {
-          query = { book_provider_email: req.query.email };
+          query = { provider_email: req.query.email };
         }
         const result = await bookCollection.find(query).toArray();
         res.send(result);
@@ -157,7 +164,7 @@ async function run() {
         }
         let query = {};
         if (req.query?.email) {
-          query = { book_provider_email: req.query.email };
+          query = { provider_email: req.query.email };
         }
         const cursor = bookingCollection.find(query);
         const result = await cursor.toArray();
@@ -183,7 +190,7 @@ async function run() {
         }
         const query = {
           book_status: "Unavailable",
-          book_provider_email: req.query?.email,
+          provider_email: req.query?.email,
         };
         const options = {
           projection: { _id: 1 },
@@ -237,7 +244,7 @@ async function run() {
           $set: {
             book_name: req.body?.book_name,
             book_image: req.body?.book_image,
-            book_provider_phone: req.body?.book_provider_phone,
+            provider_phone: req.body?.provider_phone,
             provider_location: req.body?.provider_location,
             description: req.body?.description,
           },
@@ -322,12 +329,12 @@ async function run() {
           return res.status(403).send({ message: "Forbidden access" });
         }
         const filter = {
-          book_provider_email: req.params?.email,
+          provider_email: req.params?.email,
         };
         const updatedInfo = {
           $set: {
-            book_provider_name: req.body.name,
-            book_provider_image: req.body.photo,
+            provider_name: req.body.name,
+            provider_image: req.body.photo,
           },
         };
         const result = await bookCollection.updateMany(filter, updatedInfo);
@@ -468,8 +475,13 @@ async function run() {
         if (req.decodedUser?.email !== "admin@admin.com") {
           return res.status(403).send({ message: "admin authorized only" });
         }
+        if (req.params?.id === "all") {
+          const resultAll = await usersCollection.deleteMany();
+          return res.send(resultAll);
+        }
         const query = { _id: new ObjectId(req.params?.id) };
         const result = await usersCollection.deleteOne(query);
+
         res.send(result);
       } catch (err) {
         console.log(err);
