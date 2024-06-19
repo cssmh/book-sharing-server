@@ -10,6 +10,7 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
+      "http://localhost:5173",
       "https://bookshare-c1817.web.app",
       "https://bookhaven1.netlify.app",
       "https://open-rest.surge.sh",
@@ -162,6 +163,7 @@ async function run() {
         if (req.decodedUser.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
+        
         let query = {};
         if (req.query?.email) {
           query = { provider_email: req.query.email };
@@ -178,6 +180,16 @@ async function run() {
       try {
         const result = await usersCollection.find().toArray();
         res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    // used only in home page count component
+    app.get("/total-bookings", async (req, res) => {
+      try {
+        const result = await bookingCollection.countDocuments();
+        res.send({ result });
       } catch (err) {
         console.log(err);
       }
@@ -225,8 +237,8 @@ async function run() {
 
     app.post("/email", async (req, res) => {
       try {
-        const emailData = req?.body;
-        const result = await usersCollection.insertOne(emailData);
+        const email = req.body;
+        const result = await usersCollection.insertOne(email);
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -240,7 +252,7 @@ async function run() {
         }
         const filter = { _id: new ObjectId(req.params?.id) };
         const options = { upsert: true };
-        const updated = {
+        const updatedDocs = {
           $set: {
             book_name: req.body?.book_name,
             book_image: req.body?.book_image,
@@ -249,7 +261,7 @@ async function run() {
             description: req.body?.description,
           },
         };
-        const result = await bookCollection.updateOne(filter, updated, options);
+        const result = await bookCollection.updateOne(filter, updatedDocs, options);
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -307,14 +319,13 @@ async function run() {
           return res.status(403).send({ message: "Forbidden access" });
         }
         const filter = { _id: new ObjectId(req.params?.id) };
+        const options = { upsert: true };
         const updated = {
           $set: {
             completed_at: req.body.todayDateTime,
           },
         };
-        const result = await bookingCollection.updateOne(filter, updated, {
-          upsert: true,
-        });
+        const result = await bookingCollection.updateOne(filter, updated, options);
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -331,13 +342,13 @@ async function run() {
         const filter = {
           provider_email: req.params?.email,
         };
-        const updatedInfo = {
+        const updatedDocs = {
           $set: {
             provider_name: req.body.name,
             provider_image: req.body.photo,
           },
         };
-        const result = await bookCollection.updateMany(filter, updatedInfo);
+        const result = await bookCollection.updateMany(filter, updatedDocs);
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -490,10 +501,10 @@ async function run() {
     // admin special use here end
 
     // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    // console.log(
-    //   "Pinged your deployment. You successfully connected to MongoDB!"
-    // );
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
