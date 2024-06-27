@@ -215,6 +215,43 @@ async function run() {
       }
     });
 
+    app.get("/user-analytics", verifyToken, async (req, res) => {
+      try {
+        const getUser = req.query?.email;
+        let query = {};
+        let queryBooking = {};
+        if (getUser) {
+          query = { provider_email: getUser };
+          queryBooking = { user_email: getUser };
+        }
+
+        const myBooks = await bookCollection.countDocuments(query);
+        const totalBooks = await bookCollection.countDocuments();
+        const myBookings = await bookingCollection.countDocuments(queryBooking);
+        const totalBooking = await bookingCollection.countDocuments();
+
+        const myProgress = await bookingCollection.countDocuments({
+          ...queryBooking,
+          status: "Progress",
+        });
+        const myCompleted = await bookingCollection.countDocuments({
+          ...queryBooking,
+          status: "Completed",
+        });
+
+        res.send({
+          totalBooks,
+          myBooks,
+          totalBooking,
+          myBookings,
+          myProgress,
+          myCompleted,
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.post("/book", async (req, res) => {
       try {
         const bookData = req.body;
