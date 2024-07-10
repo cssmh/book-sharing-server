@@ -10,7 +10,6 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
       "https://bookshare-c1817.web.app",
       "https://bookhaven1.netlify.app",
       "https://open-rest.surge.sh",
@@ -247,6 +246,34 @@ async function run() {
           myProgress,
           myCompleted,
         });
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    app.get("/book-providers", async (req, res) => {
+      try {
+        const pipeline = [
+          {
+            $group: {
+              _id: "$provider_email",
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $project: {
+              email: "$_id",
+              count: 1,
+              _id: 0,
+            },
+          },
+          {
+            $sort: { email: 1 },
+            // Sorts by email in ascending order
+          },
+        ];
+        const result = await bookCollection.aggregate(pipeline).toArray();
+        res.send(result);
       } catch (err) {
         console.log(err);
       }
@@ -538,10 +565,10 @@ async function run() {
     // admin special use here end
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
