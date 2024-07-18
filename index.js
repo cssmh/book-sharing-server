@@ -50,6 +50,7 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     //  await client.connect();
+    client.connect();
 
     const bookCollection = client.db("bookHaven").collection("books");
     const bookingCollection = client.db("bookHaven").collection("bookings");
@@ -162,7 +163,7 @@ async function run() {
         if (req.decodedUser.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
-        
+
         let query = {};
         if (req.query?.email) {
           query = { provider_email: req.query.email };
@@ -279,6 +280,34 @@ async function run() {
       }
     });
 
+    app.get("/monthly-stats", async (req, res) => {
+      try {
+        const userEmail = req.query?.email;
+        const query = userEmail ? { provider_email: userEmail } : {};
+
+        const allBooks = await bookCollection.find(query).toArray();
+
+        const monthCounts = {};
+        allBooks.forEach((book) => {
+          const month = book.added_time.split(" ")[0];
+          if (monthCounts[month]) {
+            monthCounts[month]++;
+          } else {
+            monthCounts[month] = 1;
+          }
+        });
+
+        const result = Object.keys(monthCounts).map((month) => ({
+          month: month,
+          count: monthCounts[month],
+        }));
+
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.post("/book", async (req, res) => {
       try {
         const bookData = req.body;
@@ -325,7 +354,11 @@ async function run() {
             description: req.body?.description,
           },
         };
-        const result = await bookCollection.updateOne(filter, updatedDocs, options);
+        const result = await bookCollection.updateOne(
+          filter,
+          updatedDocs,
+          options
+        );
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -389,7 +422,11 @@ async function run() {
             completed_at: req.body.todayDateTime,
           },
         };
-        const result = await bookingCollection.updateOne(filter, updated, options);
+        const result = await bookingCollection.updateOne(
+          filter,
+          updated,
+          options
+        );
         res.send(result);
       } catch (err) {
         console.log(err);
