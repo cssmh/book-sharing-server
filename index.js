@@ -20,7 +20,8 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-const verifyToken = async (req, res, next) => {
+// JWT Authentication Middleware
+const isToken = async (req, res, next) => {
   const token = req?.cookies?.token;
   if (!token) {
     return res.status(401).send({ message: "unauthorized access" });
@@ -35,10 +36,8 @@ const verifyToken = async (req, res, next) => {
   });
 };
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vkpbftc.mongodb.net/?retryWrites=true&w=majority`;
-
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
+const client = new MongoClient(process.env.URI, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
@@ -50,11 +49,22 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     //  await client.connect();
-    client.connect();
 
     const bookCollection = client.db("bookHaven").collection("books");
     const bookingCollection = client.db("bookHaven").collection("bookings");
-    const usersCollection = client.db("bookHaven").collection("emails");
+    const userCollection = client.db("bookHaven").collection("users");
+    const emailCollection = client.db("bookHaven").collection("emails");
+
+    // middleware
+    // use verify admin after isToken
+    const isAdmin = async (req, res, next) => {
+      const email = req.decodedUser.email.toLowerCase();
+      const user = await userCollection.findOne({ email });
+      if (!user || user?.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
 
     app.post("/jwt", async (req, res) => {
       try {
@@ -75,7 +85,7 @@ async function run() {
       }
     });
 
-    app.post("/logout", async (req, res) => {
+    app.get("/logout", async (req, res) => {
       try {
         // const user = req.body;
         // console.log(user);
@@ -102,6 +112,7 @@ async function run() {
           $or: [
             { book_name: { $regex: searchTerm, $options: "i" } },
             { provider_name: { $regex: searchTerm, $options: "i" } },
+            { provider_location: { $regex: searchTerm, $options: "i" } },
           ],
         };
         const totalBooks = (await bookCollection.countDocuments(query)) || 0;
@@ -115,7 +126,7 @@ async function run() {
       }
     });
 
-    app.get("/my-books", async (req, res) => {
+    app.get("/providers-books", async (req, res) => {
       try {
         let query = {};
         if (req.query?.email) {
@@ -139,46 +150,37 @@ async function run() {
       }
     });
 
-    app.get("/my-bookings", verifyToken, async (req, res) => {
+    app.get("/my-bookings", isToken, async (req, res) => {
       try {
         // console.log(req.cookies);
         if (req.decodedUser?.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
-
         let query = {};
         if (req.query?.email) {
           query = { user_email: req.query.email };
         }
+        const totalCart = await bookingCollection.countDocuments(query);
         const cursor = bookingCollection.find(query);
         const result = await cursor.toArray();
-        res.send(result);
+
+        res.send({ result, totalCart });
       } catch (err) {
         console.log(err);
       }
     });
 
-    app.get("/my-pending", verifyToken, async (req, res) => {
+    app.get("/my-pending", isToken, async (req, res) => {
       try {
         if (req.decodedUser.email !== req.query?.email) {
           return res.status(403).send({ message: "forbidden access" });
         }
-
         let query = {};
         if (req.query?.email) {
           query = { provider_email: req.query.email };
         }
         const cursor = bookingCollection.find(query);
         const result = await cursor.toArray();
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    app.get("/emails", async (req, res) => {
-      try {
-        const result = await usersCollection.find().toArray();
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -195,11 +197,12 @@ async function run() {
       }
     });
 
-    app.get("/unavailable-ids", verifyToken, async (req, res) => {
+    app.get("/unavailable-ids", isToken, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.query?.email) {
           return res.status(403).send({ message: "Forbidden access" });
         }
+
         const query = {
           book_status: "Unavailable",
           provider_email: req.query?.email,
@@ -207,16 +210,23 @@ async function run() {
         const options = {
           projection: { _id: 1 },
         };
-        const cursor = bookCollection.find(query, options);
-        const result = await cursor.toArray();
-        res.send(result);
+
+        const result = await bookCollection.find(query, options).toArray();
+        if (!result) {
+          return res.send({ message: "No unavailable books found" });
+        }
+        const unavailableIds = result.map((book) => book._id);
+        res.send(unavailableIds);
       } catch (err) {
         console.log(err);
       }
     });
 
-    app.get("/user-analytics", verifyToken, async (req, res) => {
+    app.get("/user-analytics", isToken, async (req, res) => {
       try {
+        if (req.decodedUser?.email !== req.query?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
+        }
         const getUser = req.query?.email;
         let query = {};
         let queryBooking = {};
@@ -252,6 +262,35 @@ async function run() {
       }
     });
 
+    // both admin and user use
+    app.get("/monthly-stats", isToken, async (req, res) => {
+      try {
+        const userEmail = req.query?.email;
+        const query = userEmail ? { provider_email: userEmail } : {};
+
+        const allBooks = await bookCollection.find(query).toArray();
+
+        const monthCounts = {};
+        allBooks.forEach((book) => {
+          const month = book.added_time.split(" ")[0];
+          if (monthCounts[month]) {
+            monthCounts[month]++;
+          } else {
+            monthCounts[month] = 1;
+          }
+        });
+
+        const result = Object.keys(monthCounts).map((month) => ({
+          month: month,
+          count: monthCounts[month],
+        }));
+
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.get("/book-providers", async (req, res) => {
       try {
         const pipeline = [
@@ -274,34 +313,6 @@ async function run() {
           },
         ];
         const result = await bookCollection.aggregate(pipeline).toArray();
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    app.get("/monthly-stats", async (req, res) => {
-      try {
-        const userEmail = req.query?.email;
-        const query = userEmail ? { provider_email: userEmail } : {};
-
-        const allBooks = await bookCollection.find(query).toArray();
-
-        const monthCounts = {};
-        allBooks.forEach((book) => {
-          const month = book.added_time.split(" ")[0];
-          if (monthCounts[month]) {
-            monthCounts[month]++;
-          } else {
-            monthCounts[month] = 1;
-          }
-        });
-
-        const result = Object.keys(monthCounts).map((month) => ({
-          month: month,
-          count: monthCounts[month],
-        }));
-
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -331,14 +342,14 @@ async function run() {
     app.post("/email", async (req, res) => {
       try {
         const email = req.body;
-        const result = await usersCollection.insertOne(email);
+        const result = await emailCollection.insertOne(email);
         res.send(result);
       } catch (err) {
         console.log(err);
       }
     });
 
-    app.put("/book/:id/:email", verifyToken, async (req, res) => {
+    app.put("/book/:id/:email", isToken, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
@@ -366,7 +377,7 @@ async function run() {
     });
 
     // book status update (available or not)
-    app.put("/book-status/:id/:email", verifyToken, async (req, res) => {
+    app.put("/book-status/:id/:email", isToken, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
@@ -386,7 +397,7 @@ async function run() {
     });
 
     // update booking status by provider
-    app.put("/booking-status/:id/:email", verifyToken, async (req, res) => {
+    app.put("/booking-status/:id/:email", isToken, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
@@ -410,7 +421,7 @@ async function run() {
     });
 
     // send completed time to booking data while completed
-    app.put("/add-time/:id/:email", verifyToken, async (req, res) => {
+    app.put("/add-time/:id/:email", isToken, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
@@ -435,7 +446,7 @@ async function run() {
 
     // update user name and photo from profile will update all his book
     // his photo and name also
-    app.put("/my-all-books/:email", verifyToken, async (req, res) => {
+    app.put("/my-all-books/:email", isToken, async (req, res) => {
       try {
         if (req.decodedUser?.email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
@@ -456,7 +467,7 @@ async function run() {
       }
     });
 
-    app.patch("/add-review/:id", verifyToken, async (req, res) => {
+    app.patch("/add-review/:id", isToken, async (req, res) => {
       try {
         const query = { _id: new ObjectId(req.params?.id) };
         const updated = {
@@ -472,12 +483,13 @@ async function run() {
       }
     });
 
-    app.delete("/book/:id/:email", verifyToken, async (req, res) => {
+    // user and admin special use here
+    app.delete("/book/:id/:email", isToken, async (req, res) => {
       try {
-        if (
-          req.decodedUser?.email !== "admin@admin.com" &&
-          req.decodedUser?.email !== req.params?.email
-        ) {
+        const email = req.decodedUser?.email;
+        const user = await userCollection.findOne({ email });
+        const isAdmin = user?.role === "admin";
+        if (!isAdmin && email !== req.params?.email) {
           return res.status(403).send({ message: "Forbidden access" });
         }
         const query = { _id: new ObjectId(req.params?.id) };
@@ -488,13 +500,13 @@ async function run() {
       }
     });
 
-    app.delete("/booking/:id/:email", verifyToken, async (req, res) => {
+    app.delete("/booking/:id/:email", isToken, async (req, res) => {
       try {
-        if (
-          req.decodedUser?.email !== req.params?.email &&
-          req.decodedUser?.email !== "admin@admin.com"
-        ) {
-          return res.status(403).send({ message: "admin authorized only" });
+        const email = req.decodedUser?.email;
+        const user = await userCollection.findOne({ email });
+        const isAdmin = user?.role === "admin";
+        if (!isAdmin && email !== req.params?.email) {
+          return res.status(403).send({ message: "Forbidden access" });
         }
         const query = { _id: new ObjectId(req.params?.id) };
         const result = await bookingCollection.deleteOne(query);
@@ -504,12 +516,8 @@ async function run() {
       }
     });
 
-    // admin special use here
-    app.get("/all-bookings", verifyToken, async (req, res) => {
+    app.get("/all-bookings", isToken, isAdmin, async (req, res) => {
       try {
-        if (req.decodedUser?.email !== "admin@admin.com") {
-          return res.status(403).send({ message: "admin authorized only" });
-        }
         const filter = req.query?.filter;
         let query = {};
 
@@ -525,56 +533,22 @@ async function run() {
       }
     });
 
-    app.put("/available-all-books", verifyToken, async (req, res) => {
+    app.patch("/user-update/:email", isToken, isAdmin, async (req, res) => {
       try {
-        if (req.decodedUser?.email !== "admin@admin.com") {
-          return res.status(403).send({ message: "admin authorized only" });
-        }
-        const options = { upsert: true };
-        const updated = {
-          $set: {
-            book_status: "available",
-          },
-          //unset means delete that field
-          $unset: {
-            user_name: 1,
-            user_review: 1,
-          },
+        const email = req.params.email.toLowerCase();
+        const query = { email };
+        const updateDoc = {
+          $set: { role: req.body.role },
         };
-        const result = await bookCollection.updateMany({}, updated, options);
+        const result = await userCollection.updateOne(query, updateDoc);
         res.send(result);
       } catch (err) {
         console.log(err);
       }
     });
 
-    app.put("/update-to-pending", verifyToken, async (req, res) => {
+    app.delete("/all-bookings", isToken, isAdmin, async (req, res) => {
       try {
-        if (req.decodedUser?.email !== "admin@admin.com") {
-          return res.status(403).send({ message: "admin authorized only" });
-        }
-        const filter = { status: { $in: ["Completed", "Progress"] } };
-        const update = {
-          $set: {
-            status: "Pending",
-          },
-          $unset: {
-            completed_at: "",
-            // MongoDB uses an empty string to indicate removal of the field
-          },
-        };
-        const result = await bookingCollection.updateMany(filter, update);
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    app.delete("/all-bookings", verifyToken, async (req, res) => {
-      try {
-        if (req.decodedUser?.email !== "admin@admin.com") {
-          return res.status(403).send({ message: "admin authorized only" });
-        }
         const result = await bookingCollection.deleteMany();
         res.send(result);
       } catch (err) {
@@ -582,17 +556,14 @@ async function run() {
       }
     });
 
-    app.delete("/email/:id", verifyToken, async (req, res) => {
+    app.delete("/email/:id", isToken, isAdmin, async (req, res) => {
       try {
-        if (req.decodedUser?.email !== "admin@admin.com") {
-          return res.status(403).send({ message: "admin authorized only" });
-        }
         if (req.params?.id === "all") {
-          const resultAll = await usersCollection.deleteMany();
+          const resultAll = await emailCollection.deleteMany();
           return res.send(resultAll);
         }
         const query = { _id: new ObjectId(req.params?.id) };
-        const result = await usersCollection.deleteOne(query);
+        const result = await emailCollection.deleteOne(query);
 
         res.send(result);
       } catch (err) {
@@ -602,7 +573,7 @@ async function run() {
     // admin special use here end
 
     // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
+    await client.db("admin").command({ ping: 1 });
     // console.log(
     //   "Pinged your deployment. You successfully connected to MongoDB!"
     // );
