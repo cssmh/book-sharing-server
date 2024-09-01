@@ -126,6 +126,16 @@ async function run() {
       }
     });
 
+    app.get("/latest-books", async (req, res) => {
+      try {
+        const cursor = bookCollection.find().sort({ _id: -1 }).limit(6);
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     app.get("/providers-books", async (req, res) => {
       try {
         let query = {};
