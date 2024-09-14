@@ -25,7 +25,7 @@ app.use(router);
 // async function run() {
 //   try {
 //     await client.db("admin").command({ ping: 1 });
-//     console.log("Pinged your deployment. Successfully connected to MongoDB!");
+//     // console.log("Pinged your deployment. Successfully connected to MongoDB!");
 //   } finally {
 //     // await client.close();
 //   }
@@ -33,7 +33,7 @@ app.use(router);
 // run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("SHARE YOUR FAVORITE BOOKS");
+  res.send("Share Your Favorite Books");
 });
 
 app.listen(port, () => {

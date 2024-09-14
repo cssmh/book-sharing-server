@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken");
-const client = require("../config/db");
 
 const addJwt = async (req, res) => {
   try {

@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const client = require("../config/db");
+const demoAdmin = process.env.DEMO_ADMIN;
 const bookCollection = client.db("bookHaven").collection("books");
 const bookingCollection = client.db("bookHaven").collection("bookings");
 const userCollection = client.db("bookHaven").collection("users");
