@@ -70,7 +70,6 @@ const getTotalAdmin = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     const email = req.decodedUser.email;
-    console.log(email);
     const user = await userCollection.findOne({ email });
     const isAdmin = user.role === "admin";
     if (!isAdmin) {
@@ -83,6 +82,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// there is no all name status in database
 const getAllBookings = async (req, res) => {
   try {
     const filter = req.query?.filter;

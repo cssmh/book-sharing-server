@@ -201,27 +201,27 @@ const getMonthlyStats = async (req, res) => {
 const getBookProviders = async (req, res) => {
   try {
     const pipeline = [
-      // Group by provider email and count the number of books
+      // Group by provider email and 
+      // count the number of books
       {
         $group: {
           _id: "$provider_email",
           count: { $sum: 1 },
         },
       },
-      // Look up the first book for each provider email
+      // Look up the first book 
+      // for each provider email
       {
         $lookup: {
-          from: "books", // Adjust if your collection name is different
+          from: "books",
           localField: "_id",
           foreignField: "provider_email",
           as: "books",
         },
       },
-      // Add the first book ID to the result
       {
         $addFields: {
           firstBookId: { $arrayElemAt: ["$books._id", 0] },
-          // Get the first book ID if available
         },
       },
       // Project only the necessary fields

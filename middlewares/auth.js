@@ -1,4 +1,4 @@
-// middlewares/authMiddleware.js
+// middlewares - authMiddleware.js
 const jwt = require("jsonwebtoken");
 const client = require("../config/db");
 const demoAdmin = process.env.DEMO_ADMIN;
