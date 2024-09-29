@@ -25,7 +25,7 @@ app.use(router);
 // async function run() {
 //   try {
 //     await client.db("admin").command({ ping: 1 });
-    // console.log("Pinged your deployment. Successfully connected to MongoDB!");
+// console.log("Pinged your deployment. Successfully connected to MongoDB!");
 //   } finally {
 //     // await client.close();
 //   }
