@@ -3,7 +3,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const app = express();
-const port = process.env.PORT || 5000;
+const port = 5000;
 // const client = require("./config/db");
 const router = require("./routes/bookRoutes");
 
@@ -25,7 +25,7 @@ app.use(router);
 // async function run() {
 //   try {
 //     await client.db("admin").command({ ping: 1 });
-//     // console.log("Pinged your deployment. Successfully connected to MongoDB!");
+    // console.log("Pinged your deployment. Successfully connected to MongoDB!");
 //   } finally {
 //     // await client.close();
 //   }

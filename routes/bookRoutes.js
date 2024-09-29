@@ -34,6 +34,7 @@ const {
   updateRole,
   deleteAllBookings,
   deleteEmails,
+  getTopBooking,
 } = require("../controllers/adminGateway");
 const { isToken, isAdmin } = require("../middlewares/auth");
 
@@ -74,6 +75,7 @@ router.delete("/book/:id/:email", isToken, deleteBook);
 router.delete("/booking/:id/:email", isToken, deleteBooking);
 // admin special gateway
 router.get("/total-admin", isToken, getTotalAdmin);
+router.get("/top-bookings", isToken, isAdmin, getTopBooking);
 router.get("/users", isToken, getAllUsers);
 router.get("/all-bookings", isToken, isAdmin, getAllBookings);
 router.patch("/user-update/:email", isToken, isAdmin, updateRole);

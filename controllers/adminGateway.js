@@ -66,6 +66,33 @@ const getTotalAdmin = async (req, res) => {
   }
 };
 
+// for to show top bookings in admin dashboard chart
+const getTopBooking = async (req, res) => {
+  try {
+    // Aggregation to group by book_name
+    // and count the number of bookings for each book
+    const topBookedBooks = await bookingCollection
+      .aggregate([
+        {
+          $group: {
+            _id: "$book_name", // Group by book name
+            // book_image: { $first: "$book_image" },
+            // Keep the book image for display purposes
+            count: { $sum: 1 }, // Count the number of bookings
+          },
+        },
+        { $sort: { count: -1 } },
+        // Sort by count in descending order (most booked first)
+        { $limit: 5 },
+      ])
+      .toArray();
+
+    res.send(topBookedBooks);
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 // isAdmin is not used because of interceptor logout
 const getAllUsers = async (req, res) => {
   try {
@@ -171,6 +198,7 @@ module.exports = {
   deleteBook,
   deleteBooking,
   getTotalAdmin,
+  getTopBooking,
   getAllUsers,
   getAllBookings,
   updateRole,
