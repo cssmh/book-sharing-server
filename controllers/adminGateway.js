@@ -165,7 +165,7 @@ const deleteAllBookings = async (req, res) => {
     if (req.demoAdmin) {
       return res
         .status(402)
-        .send({ message: "Demo Admin has read-only access" });
+        .send({ message: "Demo Admins are restricted to read-only actions" });
     }
     const result = await bookingCollection.deleteMany();
     res.send(result);
@@ -179,7 +179,7 @@ const deleteEmails = async (req, res) => {
     if (req.demoAdmin) {
       return res
         .status(402)
-        .send({ message: "Demo Admin has read-only access" });
+        .send({ message: "Demo Admins are restricted to read-only actions" });
     }
     if (req.params?.id === "all") {
       const resultAll = await emailCollection.deleteMany();

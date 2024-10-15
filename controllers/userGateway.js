@@ -4,7 +4,7 @@ const userCollection = client.db("bookHaven").collection("users");
 const addUser = async (req, res) => {
   try {
     const currentUser = req.body;
-    const query = { email: currentUser.email };
+    const query = { email: currentUser?.email };
     const user = await userCollection.findOne(query);
     const role = user && user.role === "admin" ? "admin" : "guest";
     const options = { upsert: true };
