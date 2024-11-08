@@ -130,43 +130,43 @@ const getUnavailableIds = async (req, res) => {
 };
 
 const getUserAnalytics = async (req, res) => {
-try {
-  if (req.decodedUser?.email !== req.query?.email) {
-    return res.status(403).send({ message: "Forbidden access" });
+  try {
+    if (req.decodedUser?.email !== req.query?.email) {
+      return res.status(403).send({ message: "Forbidden access" });
+    }
+    const getUser = req.query?.email;
+    let query = {};
+    let queryBooking = {};
+    if (getUser) {
+      query = { provider_email: getUser };
+      queryBooking = { user_email: getUser };
+    }
+
+    const myBooks = await bookCollection.countDocuments(query);
+    const totalBooks = await bookCollection.countDocuments();
+    const myBookings = await bookingCollection.countDocuments(queryBooking);
+    const totalBooking = await bookingCollection.countDocuments();
+
+    const myProgress = await bookingCollection.countDocuments({
+      ...queryBooking,
+      status: "Progress",
+    });
+    const myCompleted = await bookingCollection.countDocuments({
+      ...queryBooking,
+      status: "Completed",
+    });
+
+    res.send({
+      totalBooks,
+      myBooks,
+      totalBooking,
+      myBookings,
+      myProgress,
+      myCompleted,
+    });
+  } catch (err) {
+    console.log(err);
   }
-  const getUser = req.query?.email;
-  let query = {};
-  let queryBooking = {};
-  if (getUser) {
-    query = { provider_email: getUser };
-    queryBooking = { user_email: getUser };
-  }
-
-  const myBooks = await bookCollection.countDocuments(query);
-  const totalBooks = await bookCollection.countDocuments();
-  const myBookings = await bookingCollection.countDocuments(queryBooking);
-  const totalBooking = await bookingCollection.countDocuments();
-
-  const myProgress = await bookingCollection.countDocuments({
-    ...queryBooking,
-    status: "Progress",
-  });
-  const myCompleted = await bookingCollection.countDocuments({
-    ...queryBooking,
-    status: "Completed",
-  });
-
-  res.send({
-    totalBooks,
-    myBooks,
-    totalBooking,
-    myBookings,
-    myProgress,
-    myCompleted,
-  });
-} catch (err) {
-  console.log(err);
-}
 };
 
 // both admin and user use
@@ -201,7 +201,7 @@ const getMonthlyStats = async (req, res) => {
 const getBookProviders = async (req, res) => {
   try {
     const pipeline = [
-      // Group by provider email and 
+      // Group by provider email and
       // count the number of books
       {
         $group: {
@@ -209,7 +209,7 @@ const getBookProviders = async (req, res) => {
           count: { $sum: 1 },
         },
       },
-      // Look up the first book 
+      // Look up the first book
       // for each provider email
       {
         $lookup: {
