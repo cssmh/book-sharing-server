@@ -1,5 +1,6 @@
 // middlewares - authMiddleware.js
 const jwt = require("jsonwebtoken");
+require("dotenv").config();
 const client = require("../config/db");
 const demoAdmin = process.env.DEMO_ADMIN;
 const userCollection = client.db("bookHaven").collection("users");

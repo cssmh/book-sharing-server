@@ -4,12 +4,12 @@ const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const app = express();
 const port = 5000;
-// const client = require("./config/db");
 const router = require("./routes/bookRoutes");
 
 app.use(
   cors({
     origin: [
+      "http://localhost:5173",
       "https://bookshare-c1817.web.app",
       "https://bookhaven1.netlify.app",
       "https://bookhaven.surge.sh",
