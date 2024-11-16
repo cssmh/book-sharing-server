@@ -6,7 +6,7 @@ const addJwt = async (req, res) => {
     const userEmail = req?.body;
     // console.log("user for token", userEmail);
     const getToken = jwt.sign(userEmail, process.env.ACCESS_TOKEN, {
-      expiresIn: "3d",
+      expiresIn: "7d",
     });
     res
       .cookie("token", getToken, {
