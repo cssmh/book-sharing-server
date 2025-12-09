@@ -17,6 +17,7 @@
     "dotenv": "^16.4.1",
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
+    "jws": "^3.2.3",
     "mongodb": "^6.2.0",
     "package": "^1.0.1"
   }
